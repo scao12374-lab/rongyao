@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>人格议事厅</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#10151e;color:#eaf0fa}body{max-width:780px;margin:auto;padding:24px 18px 60px}h1{font-size:30px;margin-bottom:8px}p{color:#aab8ce;line-height:1.6}section,article{background:#1b2433;border:1px solid #2d3a50;border-radius:18px;padding:18px;margin:18px 0}label{display:block;margin:12px 0}textarea,input,button{box-sizing:border-box;font:inherit;border-radius:10px;padding:13px;border:1px solid #3d4f6b}textarea,input{width:100%;background:#101824;color:white}textarea{min-height:110px;resize:vertical}button{background:#395edb;color:white;cursor:pointer;margin:8px 6px 0 0}button:disabled{opacity:.5}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;line-height:1.75}small{color:#aab8ce}summary{cursor:pointer;padding:12px 0}#status{color:#c4d2ff;min-height:24px}.pill{display:inline-block;padding:7px 10px;background:#28364e;border-radius:30px;margin:4px;font-size:13px}.muted{background:#253449}#notice{color:#ffbba9}a{color:#a9c2ff}
+</style>
+<h1>人格议事厅</h1><p>一个稳定的主顾问，多个独立的思考角度。</p>
+<div><span class="pill">主人格 · 综合判断</span><span class="pill">DeepSeek · 逻辑</span><span class="pill">豆包 · 实践</span><span class="pill">千问 · 方案</span></div>
+<section id="login"><label>服务访问口令<input id="token" type="password" autocomplete="current-password" placeholder="在服务器设置的访问口令"></label><button id="signin">连接议事厅</button><small>这里填写个人访问口令；各模型 API Key 仅在服务器配置。</small></section>
+<main id="main" hidden><section><label for="question">今天想一起想清楚什么？</label><textarea id="question" maxlength="6000" placeholder="描述问题、目标，以及你已经考虑的方案…"></textarea><button id="ask">开始讨论</button><p>问题、近期对话及已保存的记忆会发送给参与讨论的模型。建议仍需按事实验证。</p></section>
+<div id="status" role="status"></div><div id="answer"></div>
+<details><summary>长期记忆 · 只保存你明确输入的信息</summary><section><input id="memoryText" maxlength="1000" placeholder="例如：我希望优先选择低成本、可以独立执行的方案"><button id="saveMemory">保存记忆</button><div id="memories"></div></section></details>
+<details open><summary>最近讨论</summary><div id="history"></div></details></main><p id="notice" role="alert"></p>
+<script>
+const $=id=>document.getElementById(id);let current=null,timer=null;
+async function api(path,method='GET',body){let r=await fetch('/api/mobile/'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});let d=await r.json();if(!r.ok){if(r.status===401){$('login').hidden=false;$('main').hidden=true;}throw Error(typeof d.detail==='string'?d.detail:'请求失败，请检查输入');}return d;}
+function notice(e){$('notice').textContent=e.message||String(e)}
+function text(tag,s){let el=document.createElement(tag);el.textContent=s;return el;}
+async function memories(){let all=await api('memory');$('memories').replaceChildren();for(let item of all){let row=document.createElement('article');row.append(text('p',item.text));let b=text('button','删除');b.className='muted';b.onclick=async()=>{try{await api('memory/'+item.id,'DELETE');await memories()}catch(e){notice(e)}};row.append(b);$('memories').append(row)}}
+async function history(){let all=await api('jobs');$('history').replaceChildren();for(let j of all){let row=document.createElement('article');let b=text('button',j.question.slice(0,65));b.className='muted';b.onclick=()=>openJob(j.id);row.append(b,text('small',' '+({done:'已完成',failed:'失败',running:'讨论中',interrupted:'服务重启，讨论中断'}[j.status]||j.status)));if(j.status!=='running'){let del=text('button','删除');del.className='muted';del.onclick=async()=>{try{await api('jobs/'+j.id,'DELETE');if(current===j.id){current=null;$('answer').replaceChildren();$('status').textContent='';}await history()}catch(e){notice(e)}};row.append(del)}$('history').append(row)}return all;}
+function render(j){let p=j.payload;$('status').textContent=j.status==='running'?(p.stage||'正在准备')+'…':j.status==='done'?'讨论已完成'+(p.degraded?' · 部分模型不可用':''):j.status==='interrupted'?'服务已重启，这次讨论中断；可以重新提问':p.error||'讨论未完成';$('answer').replaceChildren(text('h2',j.question));if(p.final){let a=document.createElement('article');a.append(text('h3','主人格建议'),text('pre',p.final.content));$('answer').append(a)}for(let group of ['opinions','reviews']){for(let item of p[group]||[]){let d=document.createElement('details');d.append(text('summary',(group==='opinions'?'独立意见 · ':'交叉审查 · ')+item.name));d.append(text('pre',item.content||item.error));$('answer').append(d)}}}
+async function openJob(id){current=id;clearTimeout(timer);await poll();}
+async function poll(){try{let id=current;if(!id)return;let j=await api('jobs/'+id);if(current!==id)return;render(j);$('ask').disabled=j.status==='running';if(j.status==='running')timer=setTimeout(poll,2500);else await history()}catch(e){notice(e);$('ask').disabled=false;}}
+async function load(){await memories();let all=await history();$('login').hidden=true;$('main').hidden=false;let active=all.find(x=>x.status==='running');if(active)await openJob(active.id)}
+$('signin').onclick=async()=>{try{await api('login','POST',{token:$('token').value});$('token').value='';$('notice').textContent='';await load()}catch(e){notice(e)}};
+$('ask').onclick=async()=>{if(!$('question').value.trim())return;$('ask').disabled=true;$('notice').textContent='';try{let j=await api('ask','POST',{question:$('question').value});await history();await openJob(j.id)}catch(e){notice(e);$('ask').disabled=false;}};
+$('saveMemory').onclick=async()=>{try{await api('memory','POST',{text:$('memoryText').value});$('memoryText').value='';await memories()}catch(e){notice(e)}};
+load().catch(e=>{if(!String(e.message).includes('登录'))notice(e)});
+</script></html>

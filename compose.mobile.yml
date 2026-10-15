@@ -1,0 +1,25 @@
+services:
+  council:
+    build:
+      context: .
+      dockerfile: Dockerfile.mobile
+    env_file: .env.mobile
+    volumes:
+      - council_data:/app/data
+    restart: unless-stopped
+  https:
+    image: caddy:2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      COUNCIL_DOMAIN: ${COUNCIL_DOMAIN:?Set COUNCIL_DOMAIN in your shell or .env}
+    volumes:
+      - ./Caddyfile.mobile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - council
+    restart: unless-stopped
+volumes:
+  council_data:
+  caddy_data:

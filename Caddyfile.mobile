@@ -1,0 +1,3 @@
+{$COUNCIL_DOMAIN} {
+    reverse_proxy council:8001
+}
