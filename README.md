@@ -1,8 +1,12 @@
 # The AI Counsel
 
+**荣耀 WIN · 人格议事厅** — [中文说明](开始使用.md) · [下载已构建的测试 APK](https://github.com/scao12374-lab/rongyao/actions/runs/38704573530/artifacts/11958110259) · [成功构建记录](https://github.com/scao12374-lab/rongyao/actions/runs/38704573530)
+
+APK 已在 GitHub Actions 编译成功；下载压缩包后解压其中的 `app-debug.apk`。该客户端需要个人云端服务；服务器部署、真实模型联调和荣耀 WIN 真机验证尚未完成。
+
 ## Personal Android extension
 
-This checkout adds `counsel_mobile/` and `android/` for a single-owner Chinese mobile council: fixed chairman, separate Doubao/Qwen endpoints, explicit persistent memory, and resumable job viewing. See [开始使用.md](开始使用.md) for the research, configuration, deployment, APK build instructions, and unverified areas. Run the dedicated mobile service rather than exposing upstream admin routes. No APK binary or live provider validation is included yet.
+This checkout adds `counsel_mobile/` and `android/` for a single-owner Chinese mobile council: fixed chairman, separate Doubao/Qwen endpoints, explicit persistent memory, and resumable job viewing. See [开始使用.md](开始使用.md) for configuration, deployment and verification status. Run the dedicated mobile service rather than exposing upstream admin routes. A debug APK was built successfully by GitHub Actions; device testing and live provider validation remain pending.
 
 > ☕ **If you find The AI Counsel useful, consider [buying me a coffee](https://buymeacoffee.com/jacobbd).**
 > It's free and built in my spare time — but testing every provider runs up a real AI bill. A coffee helps me cover it and keep shipping. Thank you! 🙏
