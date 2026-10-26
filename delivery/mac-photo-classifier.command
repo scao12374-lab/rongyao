@@ -212,14 +212,21 @@ def copy_plan(plan):
             with src.open('rb') as inp, dst.open('xb') as out:
                 created = True
                 shutil.copyfileobj(inp,out,1024*1024)
+            r['status'] = '已复制'
+            r['reason'] = ''
             outcomes['已复制']+=1
         except FileExistsError:
+            r['status'] = '复制期间发现同名文件'
+            r['reason'] = '目标已被其他程序或上一次运行创建，本次跳过，未覆盖'
             outcomes['跳过同名文件']+=1
-        except Exception:
+        except Exception as exc:
             # 中途复制失败的非完整目的文件应该清理，避免将损坏图片当成功导入
             if created and dst.exists():
                 try:dst.unlink()
                 except OSError:pass
+            r['status'] = '复制错误'
+            r['reason'] = f'{type(exc).__name__}: {exc}'
+            print('复制失败：', src, ' -> ', dst, '原因：', r['reason'], flush=True)
             outcomes['复制错误']+=1
     return outcomes
 
@@ -271,7 +278,14 @@ def main():
             print('台账异常：', len(warnings), '条，首批：', warnings[:5])
         subprocess.run(['open', str(report)], check=False)
         if not plan:
-            notify('未找到可识别的照片。已读取台账，但不会建立目录或复制任何文件。请确认五类来源文件夹的位置。')
+            notify('扫描结果为 0 张照片：没有找到支持的图片文件。请检查选择的照片总目录，里面是否有五个照片类型子文件夹。不会创建空文件夹。')
+            return
+        if stats.get('可复制', 0) == 0:
+            reasons = Counter(x['reason'] for x in plan if x['status'] in ('待核对','冲突'))
+            examples = '\\n'.join(f'{reason}: {count} 张' for reason,count in reasons.most_common(4))
+            print('没有可复制的照片，未创建或修改归档目录。请检查桌面【电网照片分类_预览.csv】。')
+            print('主要原因：', reasons.most_common(10))
+            notify('扫描了 '+str(len(plan))+' 张图片，但【可复制 = 0】。\\n没有建立目录或复制照片。\\n\\n主要原因：\\n'+examples+'\\n\\n请打开桌面的【电网照片分类_预览.csv】查看具体照片和原因。')
             return
         message = (f'已读取第一表 {len(first_records)} 条、第二表 {len(second_records)} 条。\n'
                    f'扫描照片 {len(plan)} 张，其中可复制 {stats.get("可复制",0)} 张，'
@@ -297,8 +311,14 @@ def main():
         saved = Path.home() / 'Desktop' / '电网照片分类_执行报告.csv'
         save_report(plan, saved)
         print('复制结果：', dict(result), '报告：', saved)
+        subprocess.run(['open', str(saved)], check=False)
         subprocess.run(['open', str(output)], check=False)
-        notify('已完成：创建文件夹并复制照片。\n复制成功 '+str(result.get('已复制',0))+' 张。\n原始照片没有删除，目标已有同名照片不会覆盖。\n详情查看桌面 CSV 报告。')
+        failed = result.get('复制错误',0)
+        completed = result.get('已复制',0)
+        if failed:
+            notify(f'本次实际复制 {completed} 张，失败 {failed} 张。\\n请查看桌面的【电网照片分类_执行报告.csv】中「复制错误」行及原因。没有删除原图。', '分类尚未全部完成')
+        else:
+            notify(f'本次实际复制 {completed} 张，未匹配照片和冲突文件已在桌面的执行报告中列出。\\n原始照片没有删除，目标已有同名照片不会覆盖。', '分类复制完成')
     except Exception as e:
         print('错误：', str(e), file=sys.stderr)
         notify('未执行归档：'+str(e), '分类程序提示')
