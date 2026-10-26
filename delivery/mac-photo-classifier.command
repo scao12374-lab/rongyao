@@ -282,10 +282,10 @@ def main():
             return
         if stats.get('可复制', 0) == 0:
             reasons = Counter(x['reason'] for x in plan if x['status'] in ('待核对','冲突'))
-            examples = '\\n'.join(f'{reason}: {count} 张' for reason,count in reasons.most_common(4))
+            examples = '\n'.join(f'{reason}: {count} 张' for reason,count in reasons.most_common(4))
             print('没有可复制的照片，未创建或修改归档目录。请检查桌面【电网照片分类_预览.csv】。')
             print('主要原因：', reasons.most_common(10))
-            notify('扫描了 '+str(len(plan))+' 张图片，但【可复制 = 0】。\\n没有建立目录或复制照片。\\n\\n主要原因：\\n'+examples+'\\n\\n请打开桌面的【电网照片分类_预览.csv】查看具体照片和原因。')
+            notify('扫描了 '+str(len(plan))+' 张图片，但【可复制 = 0】。\n没有建立目录或复制照片。\n\n主要原因：\n'+examples+'\n\n请打开桌面的【电网照片分类_预览.csv】查看具体照片和原因。')
             return
         message = (f'已读取第一表 {len(first_records)} 条、第二表 {len(second_records)} 条。\n'
                    f'扫描照片 {len(plan)} 张，其中可复制 {stats.get("可复制",0)} 张，'
@@ -316,9 +316,9 @@ def main():
         failed = result.get('复制错误',0)
         completed = result.get('已复制',0)
         if failed:
-            notify(f'本次实际复制 {completed} 张，失败 {failed} 张。\\n请查看桌面的【电网照片分类_执行报告.csv】中「复制错误」行及原因。没有删除原图。', '分类尚未全部完成')
+            notify(f'本次实际复制 {completed} 张，失败 {failed} 张。\n请查看桌面的【电网照片分类_执行报告.csv】中「复制错误」行及原因。没有删除原图。', '分类尚未全部完成')
         else:
-            notify(f'本次实际复制 {completed} 张，未匹配照片和冲突文件已在桌面的执行报告中列出。\\n原始照片没有删除，目标已有同名照片不会覆盖。', '分类复制完成')
+            notify(f'本次实际复制 {completed} 张，未匹配照片和冲突文件已在桌面的执行报告中列出。\n原始照片没有删除，目标已有同名照片不会覆盖。', '分类复制完成')
     except Exception as e:
         print('错误：', str(e), file=sys.stderr)
         notify('未执行归档：'+str(e), '分类程序提示')
